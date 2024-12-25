@@ -72,7 +72,7 @@ async function getReviewData(userid) {
     return {
         data: data,
         sha: messageIdSha,
-        exists: data.content !== "Not Found"
+        exists: data.content !== "Not Found" && data.messageid === -9000000000
     };
 }
 
