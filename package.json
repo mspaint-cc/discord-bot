@@ -1,0 +1,18 @@
+{
+    "name": "mspaintpostbot",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "dev": "node index.js"
+    },
+    "type": "module",
+    "author": "mstudio45 & upio",
+    "license": "ISC",
+    "description": "bot to filter garbage ahh posts and made them use the format",
+    "dependencies": {
+        "@octokit/rest": "^21.0.2",
+        "discord.js": "^14.16.3",
+        "dotenv": "^16.4.7",
+        "out-of-character": "^1.2.2"
+    }
+}
