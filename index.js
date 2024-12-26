@@ -72,7 +72,7 @@ async function getReviewData(userid) {
     return {
         data: data,
         sha: messageIdSha,
-        exists: data.content !== "Not Found" && data.messageid === -9000000000
+        exists: data.content !== "Not Found" && data.messageid !== -9000000000
     };
 }
 
@@ -250,6 +250,8 @@ async function moderateReview(review) {
             match.toLowerCase() === "https://mspaint.cc"
         ) ? match : "[REDACTED]";
     });
+
+    review = review.replace(/%[0-9A-Fa-f]{2}/g, "*"); // Replace URL encoded characters with asterisks
 
     // Replace profane words with asterisks
     profanityList.forEach((word) => {
