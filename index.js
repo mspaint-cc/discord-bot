@@ -304,6 +304,66 @@ function checkCooldown(cooldownAmount, interaction, cooldownId, skip) {
     return false;
 }
 
+// data
+/*
+
+{
+    "updating": false,
+    "building": false,
+    "publishing": false,
+
+    "errored": false,
+    "whereError": "updating",
+    "error": "error message"
+}
+*/
+function generateUpdateText(data, doesRequireBuilding) {
+    let text = "```ini\n[Updating] ❌\n[Building] ❌\n[Publishing] ❌\n```"
+
+    if (doesRequireBuilding) {
+        text = "```ini\n[Updating] 🔄\n[Building] ❌\n[Publishing] ❌\n```"
+
+        if (data.updating) {
+            const emoji_to_add = data.errored && data.whereError == "updating" ? "⚠️" : "✅";
+            const suffix = data.errored && data.whereError == "updating" ? "\n\n```diff\n- " + data.error + "\n```" : "";
+
+            text = "```ini\n[Updating] " + emoji_to_add + "\n[Building] 🔄\n[Publishing] ❌\n```" + suffix
+        }
+
+        if (data.building) {
+            const emoji_to_add = data.errored && data.whereError == "building" ? "⚠️" : "✅";
+            const suffix = data.errored && data.whereError == "building" ? "\n\n```diff\n- " + data.error + "\n```" : "";
+
+            text = "```ini\n[Updating] ✅\n[Building] " + emoji_to_add + "\n[Publishing] 🔄\n```" + suffix
+        }
+
+        if (data.publishing) {
+            const emoji_to_add = data.errored && data.whereError == "publishing" ? "⚠️" : "✅";
+            const suffix = data.errored && data.whereError == "publishing" ? "\n\n```diff\n- " + data.error + "\n```" : "";
+
+            text = "```ini\n[Updating] ✅\n[Building] ✅\n[Publishing] " + emoji_to_add + "\n```" + suffix
+        }
+    } else {
+        text = "```ini\n[Updating] 🔄\n[Publishing] ❌\n```"
+
+        if (data.updating) {
+            const emoji_to_add = data.errored && data.whereError == "updating" ? "⚠️" : "✅";
+            const suffix = data.errored && data.whereError == "updating" ? "\n\n```diff\n- " + data.error + "\n```" : "";
+
+            text = "```ini\n[Updating] " + emoji_to_add + "\n[Publishing] 🔄\n```" + suffix
+        }
+
+        if (data.publishing) {
+            const emoji_to_add = data.errored && data.whereError == "publishing" ? "⚠️" : "✅";
+            const suffix = data.errored && data.whereError == "publishing" ? "\n\n```diff\n- " + data.error + "\n```" : "";
+
+            text = "```ini\n[Updating] ✅\n[Publishing] " + emoji_to_add + "\n```" + suffix
+        }
+    }
+
+    return text;
+}
+
 bot.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isCommand()) {
         let cooldownAmount = 10;
@@ -405,31 +465,135 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                 await interaction.reply({ content: "You are not allowed to use this command.", ephemeral: true });
             }
 
+            const doesRequireBuilding = interaction.options.getString('subscript') != 'keysystemgui' && interaction.options.getString('subscript') != 'deathfarm';
+
             const reply = await interaction.reply({
                 content: null,
                 embeds: [
                     {
                         "title": "Updating mspaint from latest github commit....",
-                        "description": "```ini\n[Building] 🔄\n[Publishing] ❌\n```",
+                        "description": generateUpdateText({
+                            updating: false,
+                            building: false,
+                            publishing: false,
+
+                            errored: false,
+                            whereError: "",
+                            error: ""
+                        }, doesRequireBuilding),
                         "color": 16734296
                     }
                 ]
             });
 
-            const { error, stdout, stderr } = await exec("bash build_mspaint.sh");
+            const { error, stdout, stderr } = await exec("bash update.sh");
+
+            const subscript = interaction.options.getString('subscript');
+            const script_id = subscriptIds[subscript];
 
             if (error) {
                 await reply.edit({
                     content: null,
                     embeds: [
                         {
-                            "title": "ERROR: Coudn't update mspaint",
-                            "description": "```ini\n[Building] ⚠\n[Publishing] ❌\n```\n\n```diff\n- " + toString(error) + "\n```",
+                            "title": "ERROR: Couldn't update mspaint",
+                            "description": generateUpdateText({
+                                updating: true,
+                                building: false,
+                                publishing: false,
+
+                                errored: true,
+                                whereError: "updating",
+                                error: toString(error)
+                            }, doesRequireBuilding),
                             "color": 16734296
                         }
                     ]
                 });
                 return;
+            }
+
+            if (!script_id) {
+                await reply.edit({
+                    content: null,
+                    embeds: [
+                        {
+                            "title": "ERROR: Invalid subscript",
+                            "description": generateUpdateText({
+                                updating: true,
+                                building: false,
+                                publishing: false,
+
+                                errored: true,
+                                whereError: "updating",
+                                error: "Error: Invalid subscript"
+                            }, doesRequireBuilding),
+                            "color": 16734296
+                        }
+                    ]
+                });
+                return;
+            }
+
+            let settings = {};
+            let script_src = "warn('Something went wrong.')";
+
+            if (doesRequireBuilding) {
+                await reply.edit({
+                    content: null,
+                    embeds: [
+                        {
+                            "title": "Publishing built script to luarmor....",
+                            "description": generateUpdateText({
+                                updating: false,
+                                building: true,
+                                publishing: false,
+
+                                errored: false,
+                                whereError: "",
+                                error: ""
+                            }, doesRequireBuilding),
+                            "color": 16734296
+                        }
+                    ]
+                });
+
+                const { build_error, build_stdout, build_stderr } = await exec("bash build.sh");
+
+                if (build_error) {
+                    await reply.edit({
+                        content: null,
+                        embeds: [
+                            {
+                                "title": "ERROR: Coudn't update mspaint",
+                                "description": generateUpdateText({
+                                    updating: true,
+                                    building: true,
+                                    publishing: false,
+
+                                    errored: true,
+                                    whereError: "building",
+                                    error: toString(build_error)
+                                }, doesRequireBuilding),
+                                "color": 16734296
+                            }
+                        ]
+                    });
+                    return;
+                }
+
+                script_src = readFileSync("mspaint-src/Distribution/Script.luau", "utf-8");
+            } else {
+                if (subscript == 'keysystemgui') {
+                    script_src = readFileSync("mspaint-src/Misc/KeySystemUI.luau", "utf-8");
+                } else {
+                    script_src = readFileSync("mspaint-src/Misc/DeathFarm.luau", "utf-8");
+                }
+
+                settings["silent"] = true;
+                settings["ffa"] = true;
+                settings["lightning"] = true;
+                settings["heartbeat"] = false;
             }
 
             await reply.edit({
@@ -437,37 +601,19 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                 embeds: [
                     {
                         "title": "Publishing built script to luarmor....",
-                        "description": "```ini\n[Building] ✅\n[Publishing] 🔄\n```",
+                        "description": generateUpdateText({
+                            updating: true,
+                            building: true,
+                            publishing: false,
+
+                            errored: false,
+                            whereError: "",
+                            error: ""
+                        }, doesRequireBuilding),
                         "color": 16734296
                     }
                 ]
             });
-
-            let script_src = "warn('Something went wrong.')";
-
-            if (interaction.options.getString('subscript') == 'keysystemgui') {
-                script_src = readFileSync("mspaint-src/Misc/KeySystemUI.luau", "utf-8");
-            } else if (interaction.options.getString('subscript') == 'deathfarm') {
-                script_src = readFileSync("mspaint-src/Misc/DeathFarm.luau", "utf-8");
-            } else {
-                script_src = readFileSync("mspaint-src/Distribution/Script.luau", "utf-8");
-            }
-
-
-            const script_id = subscriptIds[interaction.options.getString('subscript')];
-            if (!script_id) {
-                await reply.edit({
-                    content: null,
-                    embeds: [
-                        {
-                            "title": "ERROR: Invalid subscript",
-                            "description": "```ini\n[Building] ✅\n[Publishing] ❌\n```\n\n```diff\n- Error: Invalid subscript\n```",
-                            "color": 16734296
-                        }
-                    ]
-                });
-                return;
-            }
 
             try {
                 const response = await fetch(`https://api.luarmor.net/v3/projects/${process.env.LRM_SCRIPT_ID}/scripts/${script_id}`, {
@@ -477,7 +623,8 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                         "Authorization": process.env["LRM_API_KEY"]
                     },
                     body: JSON.stringify({
-                        script: script_src
+                        script: script_src,
+                        ...settings
                     })
                 })
 
@@ -488,7 +635,15 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                         embeds: [
                             {
                                 "title": "ERROR: Couldn't publish to luarmor",
-                                "description": "```ini\n[Building] ✅\n[Publishing] ⚠\n```\n\n```diff\n- " + JSON.parse(data.message).error + "\n```",
+                                "description": generateUpdateText({
+                                    updating: true,
+                                    building: true,
+                                    publishing: true,
+
+                                    errored: true,
+                                    whereError: "publishing",
+                                    error: JSON.parse(data.message).error
+                                }, doesRequireBuilding),
                                 "color": 16734296
                             }
                         ]
@@ -501,7 +656,15 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                     embeds: [
                         {
                             "title": `Successfully updated mspaint (${interaction.options.getString('subscript')}) to luarmor`,
-                            "description": "```ini\n[Building] ✅\n[Publishing] ✅\n```",
+                            "description": generateUpdateText({
+                                updating: true,
+                                building: true,
+                                publishing: true,
+
+                                errored: false,
+                                whereError: "",
+                                error: ""
+                            }, doesRequireBuilding),
                             "color": 6094592
                         }
                     ],
@@ -512,7 +675,15 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                     embeds: [
                         {
                             "title": "ERROR: Couldn't publish to luarmor",
-                            "description": "```ini\n[Building] ✅\n[Publishing] ⚠\n```\n\n```diff\n- " + error.message + "\n```",
+                            "description": ({
+                                updating: true,
+                                building: true,
+                                publishing: true,
+
+                                errored: true,
+                                whereError: "publishing",
+                                error: error.message || toString(error)
+                            }, doesRequireBuilding),
                             "color": 16734296
                         }
                     ]
