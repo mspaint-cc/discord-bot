@@ -49,7 +49,9 @@ let REVIEW_ID = "1320811600332062741", REVIEW_CHANNEL;
 
 const subscriptIds = {
     production: process.env["LRM_SUBSCRIPT_PROD"],
-    test: process.env["LRM_SUBSCRIPT_TEST"]
+    test: process.env["LRM_SUBSCRIPT_TEST"],
+    keysystemgui: process.env["LRM_SUBSCRIPT_KEYSYSTEMGUI"],
+    deathfarm: process.env["LRM_SUBSCRIPT_DEATHFARM"]
 }
 
 // Review functions
@@ -166,7 +168,9 @@ bot.on("ready", async () => {
                 .setRequired(true)
                 .addChoices(
                     { name: 'production', value: 'production' },
-                    { name: 'test', value: 'test' }
+                    { name: 'test', value: 'test' },
+                    { name: 'keysystemgui', value: 'keysystemgui' },
+                    { name: 'deathfarm', value: 'deathfarm' },
                 ));
 
     bot.application.commands.create(updateCommand);
@@ -439,7 +443,16 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                 ]
             });
 
-            const built_version = readFileSync("mspaint-src/Distribution/Script.luau", "utf-8");
+            let script_src = "warn('Something went wrong.')";
+
+            if (interaction.options.getString('subscript') == 'keysystemgui') {
+                script_src = readFileSync("mspaint-src/Misc/KeySystemUI.luau", "utf-8");
+            } else if (interaction.options.getString('subscript') == 'deathfarm') {
+                script_src = readFileSync("mspaint-src/Misc/DeathFarm.luau", "utf-8");
+            } else {
+                script_src = readFileSync("mspaint-src/Distribution/Script.luau", "utf-8");
+            }
+
 
             const script_id = subscriptIds[interaction.options.getString('subscript')];
             if (!script_id) {
@@ -464,7 +477,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                         "Authorization": process.env["LRM_API_KEY"]
                     },
                     body: JSON.stringify({
-                        script: built_version
+                        script: script_src
                     })
                 })
 
