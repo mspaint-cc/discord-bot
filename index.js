@@ -1,6 +1,7 @@
 import {
     Client,
     GatewayIntentBits,
+    Partials,
     SlashCommandBuilder,
     Events,
     Collection,
@@ -25,7 +26,10 @@ const bot = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-    ]
+        GatewayIntentBits.DirectMessageReactions,
+        GatewayIntentBits.GuildMessageReactions
+    ],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 bot.cooldowns = new Collection();
 
@@ -38,21 +42,43 @@ const octokit = new Octokit({
 });
 
 // SETTINGS
-const GUILD_ID = "1282361102935658777"
-const BLACKLIST_ROLE = "1290729273556074496"
-const REVIEW_BLACKLIST_ROLE = "1320839505485369456"
-
-let BUGREPORT_ID = "1282362164623052922", BUGREPORT_CHANNEL;
-let SUGGESTION_ID = "1290728237508460594", SUGGESTION_CHANNEL;
-let REVIEW_ID = "1320811600332062741", REVIEW_CHANNEL;
-// SETTINGS END
-
 const subscriptIds = {
     production: process.env["LRM_SUBSCRIPT_PROD"],
     test: process.env["LRM_SUBSCRIPT_TEST"],
     keysystemgui: process.env["LRM_SUBSCRIPT_KEYSYSTEMGUI"],
     deathfarm: process.env["LRM_SUBSCRIPT_DEATHFARM"]
 }
+
+const SETTINGS = {
+    GUILD_ID: "1282361102935658777",
+
+    ROLES: {
+        REQUIRED_FOR_POSTS: "1298778295982227466",
+        BLACKLIST: "1290729273556074496",
+        REVIEW_BLACKLIST: "1320839505485369456"
+    },
+
+    REQUIRED_REACTIONS: {
+        BUGREPORT:  [
+            { CHANNEL_ID: "1285264560298790923", ID: "1327608638294200390", EMOJI: "✅" }, // known-bugs
+            { CHANNEL_ID: "1292136911858565140", ID: "1305155370364178452", EMOJI: "✅" }  // faq
+        ],
+
+        SUGGESTION: [
+            { CHANNEL_ID: "1284272976795144234", ID: "1327638810481131663", EMOJI: "✅" }, // patched-features
+            { CHANNEL_ID: "1292136911858565140", ID: "1305155370364178452", EMOJI: "✅" }  // faq
+        ]
+    },
+
+    CHANNELS: {
+        BUGREPORT: "1282362164623052922",
+        SUGGESTION: "1290728237508460594",
+        REVIEW: "1320811600332062741"
+    }
+}
+let GUILD, BUGREPORT_CHANNEL, SUGGESTION_CHANNEL, REVIEW_CHANNEL;
+const CHANNEL_CACHE = [];
+// SETTINGS END
 
 // Review functions
 async function getReviewData(userid) {
@@ -132,10 +158,15 @@ bot.on("error", console.error);
 bot.on("ready", async () => {
     console.log(`[READY] ${bot.user.tag} has been successfully booted up!`)
 
-    const guild = await bot.guilds.fetch(GUILD_ID);
-    if (BUGREPORT_ID != "") BUGREPORT_CHANNEL = await guild.channels.fetch(BUGREPORT_ID);
-    if (SUGGESTION_ID != "") SUGGESTION_CHANNEL = await guild.channels.fetch(SUGGESTION_ID);
-    if (REVIEW_ID != "") REVIEW_CHANNEL = await guild.channels.fetch(REVIEW_ID);
+    GUILD = await bot.guilds.fetch(SETTINGS.GUILD_ID);
+    if (SETTINGS.CHANNELS.BUGREPORT != "") 
+        BUGREPORT_CHANNEL = await GUILD.channels.fetch(SETTINGS.CHANNELS.BUGREPORT);
+
+    if (SETTINGS.CHANNELS.SUGGESTION != "")
+        SUGGESTION_CHANNEL = await GUILD.channels.fetch(SETTINGS.CHANNELS.SUGGESTION);
+
+    if (SETTINGS.CHANNELS.REVIEW != "") 
+        REVIEW_CHANNEL = await GUILD.channels.fetch(SETTINGS.CHANNELS.REVIEW);
 
     // bug report command
     const bugReportCommand = new SlashCommandBuilder()
@@ -150,47 +181,46 @@ bot.on("ready", async () => {
             .setDescription("Any video of what the bug does or how to reproduce it.")
         );
 
-    bot.application.commands.create(bugReportCommand);
-
     // suggestion command
     const suggestionCommand = new SlashCommandBuilder()
         .setName('suggestion')
         .setDescription('Submit a suggestion');
 
-    bot.application.commands.create(suggestionCommand);
 
     const updateCommand = new SlashCommandBuilder()
         .setName('update')
         .setDescription('[DEVELOPER ONLY] update mspaint to luarmor')
-        .addStringOption(option =>
-            option.setName('subscript')
-                .setDescription('the sub-script to update')
-                .setRequired(true)
-                .addChoices(
-                    { name: 'production', value: 'production' },
-                    { name: 'test', value: 'test' },
-                    { name: 'keysystemgui', value: 'keysystemgui' },
-                    { name: 'deathfarm', value: 'deathfarm' },
-                ));
-
-    bot.application.commands.create(updateCommand);
+        .addStringOption(option => option.setName('subscript')
+            .setDescription('the sub-script to update')
+            .setRequired(true)
+            .addChoices(
+                { name: 'production', value: 'production' },
+                { name: 'test', value: 'test' },
+                { name: 'keysystemgui', value: 'keysystemgui' },
+                { name: 'deathfarm', value: 'deathfarm' },
+            )
+        );
 
     // review command
     const reviewCommand = new SlashCommandBuilder()
         .setName('review')
         .setDescription('Review the mspaint script')
-        .addStringOption(option =>
-            option.setName('stars')
-                .setDescription('amount of stars you want to give')
-                .setRequired(true)
-                .addChoices(
-                    { name: '⭐⭐⭐⭐⭐', value: '⭐⭐⭐⭐⭐' },
-                    { name: '⭐⭐⭐⭐', value: '⭐⭐⭐⭐' },
-                    { name: '⭐⭐⭐', value: '⭐⭐⭐' },
-                    { name: '⭐⭐', value: '⭐⭐' },
-                    { name: '⭐', value: '⭐' },
-                ));
+        .addStringOption(option => option.setName('stars')
+            .setDescription('amount of stars you want to give')
+            .setRequired(true)
+            .addChoices(
+                { name: '⭐⭐⭐⭐⭐', value: '⭐⭐⭐⭐⭐' },
+                { name: '⭐⭐⭐⭐', value: '⭐⭐⭐⭐' },
+                { name: '⭐⭐⭐', value: '⭐⭐⭐' },
+                { name: '⭐⭐', value: '⭐⭐' },
+                { name: '⭐', value: '⭐' },
+            )
+        );
 
+    // create commands
+    bot.application.commands.create(bugReportCommand);
+    bot.application.commands.create(suggestionCommand);
+    bot.application.commands.create(updateCommand);
     bot.application.commands.create(reviewCommand);
 });
 process.stdin.resume()
@@ -364,9 +394,33 @@ function generateUpdateText(data, doesRequireBuilding) {
     return text;
 }
 
+// events
+bot.on(Events.MessageReactionAdd, async (reaction, user) => { // for cache updates, i love discord
+    try {
+        let found = false;
+        for (const idx in SETTINGS.REQUIRED_REACTIONS) {
+            const arr = SETTINGS.REQUIRED_REACTIONS[idx];
+            
+            for (const val_idx in arr) {
+                if (reaction.message.id === arr[val_idx].ID) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) return;
+
+        if (reaction.partial) await reaction.fetch();
+        if (reaction.users.cache.size === 0) await reaction.users.fetch();
+    } catch (error) {
+        return
+    }
+});
+
 bot.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isCommand()) {
         let cooldownAmount = 10;
+        
         if (interaction.commandName == 'bugreport')
             cooldownAmount = 300;
         else if (interaction.commandName == 'suggestion')
@@ -388,9 +442,35 @@ bot.on(Events.InteractionCreate, async (interaction) => {
         // GLOBAL END //
 
         if (interaction.commandName == 'bugreport') {
-            if (BLACKLIST_ROLE != "" && interaction.member.roles.cache.has(BLACKLIST_ROLE)) {
-                await interaction.reply({ content: "You are blacklisted.", ephemeral: true })
-                return;
+            if (SETTINGS.ROLES.BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.BLACKLIST)) 
+                return await interaction.reply({ content: "You are blacklisted.", ephemeral: true });
+
+            if (SETTINGS.ROLES.REQUIRED_FOR_POSTS != "" && !interaction.member.roles.cache.has(SETTINGS.ROLES.REQUIRED_FOR_POSTS))
+                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role.", ephemeral: true });
+            
+            // REACTIONS
+            try {
+                for (const reaction_idx in SETTINGS.REQUIRED_REACTIONS.BUGREPORT) {
+                    const reaction_data = SETTINGS.REQUIRED_REACTIONS.BUGREPORT[reaction_idx];
+    
+                    const reaction_channel = CHANNEL_CACHE.includes(reaction_data.CHANNEL_ID) ? CHANNEL_CACHE[reaction_data.CHANNEL_ID] : await GUILD.channels.fetch(reaction_data.CHANNEL_ID);
+                    if (!reaction_channel) return await interaction.reply({ content: "Failed to verify required reaction(s).\n-# Couldn't fetch channel.", ephemeral: true });
+                    CHANNEL_CACHE[reaction_data.CHANNEL_ID] = reaction_channel;
+
+                    const reaction_message = await reaction_channel.messages.fetch(reaction_data.ID);
+                    if (!reaction_message) return await interaction.reply({ content: "Failed to verify required reaction(s).\n-# Couldn't get message from cache.", ephemeral: true });
+
+                    const emoji_reaction = reaction_message.reactions.cache.get(reaction_data.EMOJI);
+                    if (!emoji_reaction)
+                        return await interaction.reply({ content: "Please read and react with " + reaction_data.EMOJI + " to this message: https://discord.com/channels/" + SETTINGS.GUILD_ID + "/" + reaction_data.CHANNEL_ID + "/" + reaction_data.ID, ephemeral: true });
+
+                    if (emoji_reaction.users.cache.size === 0) await emoji_reaction.users.fetch();
+                    if (!emoji_reaction.users.cache.get(interaction.user.id))
+                        return await interaction.reply({ content: "Please read and react with " + reaction_data.EMOJI + " to this message: https://discord.com/channels/" + SETTINGS.GUILD_ID + "/" + reaction_data.CHANNEL_ID + "/" + reaction_data.ID, ephemeral: true });
+                }
+            } catch (error) {
+                console.warn(error);
+                return await interaction.reply({ content: "Failed to verify required reaction(s).", ephemeral: true });
             }
 
             const modal = new ModalBuilder()
@@ -431,9 +511,35 @@ bot.on(Events.InteractionCreate, async (interaction) => {
 
             await interaction.showModal(modal);
         } else if (interaction.commandName == 'suggestion') {
-            if (BLACKLIST_ROLE != "" && interaction.member.roles.cache.has(BLACKLIST_ROLE)) {
-                await interaction.reply({ content: "You are blacklisted.", ephemeral: true })
-                return;
+            if (SETTINGS.ROLES.BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.BLACKLIST)) 
+                return await interaction.reply({ content: "You are blacklisted.", ephemeral: true });
+
+            if (SETTINGS.ROLES.REQUIRED_FOR_POSTS != "" && !interaction.member.roles.cache.has(SETTINGS.ROLES.REQUIRED_FOR_POSTS))
+                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role.", ephemeral: true });
+
+            // REACTIONS
+            try {
+                for (const reaction_idx in SETTINGS.REQUIRED_REACTIONS.SUGGESTION) {
+                    const reaction_data = SETTINGS.REQUIRED_REACTIONS.SUGGESTION[reaction_idx];
+    
+                    const reaction_channel = CHANNEL_CACHE.includes(reaction_data.CHANNEL_ID) ? CHANNEL_CACHE[reaction_data.CHANNEL_ID] : await GUILD.channels.fetch(reaction_data.CHANNEL_ID);
+                    if (!reaction_channel) return await interaction.reply({ content: "Failed to verify required reaction(s).\n-# Couldn't fetch channel.", ephemeral: true });
+                    CHANNEL_CACHE[reaction_data.CHANNEL_ID] = reaction_channel;
+
+                    const reaction_message = await reaction_channel.messages.fetch(reaction_data.ID);
+                    if (!reaction_message) return await interaction.reply({ content: "Failed to verify required reaction(s).\n-# Couldn't get message from cache.", ephemeral: true });
+
+                    const emoji_reaction = reaction_message.reactions.cache.get(reaction_data.EMOJI);
+                    if (!emoji_reaction)
+                        return await interaction.reply({ content: "Please read and react with " + reaction_data.EMOJI + " to this message: https://discord.com/channels/" + SETTINGS.GUILD_ID + "/" + reaction_data.CHANNEL_ID + "/" + reaction_data.ID, ephemeral: true });
+
+                    if (emoji_reaction.users.cache.size === 0) await emoji_reaction.users.fetch();
+                    if (!emoji_reaction.users.cache.get(interaction.user.id))
+                        return await interaction.reply({ content: "Please read and react with " + reaction_data.EMOJI + " to this message: https://discord.com/channels/" + SETTINGS.GUILD_ID + "/" + reaction_data.CHANNEL_ID + "/" + reaction_data.ID, ephemeral: true });
+                }
+            } catch (error) {
+                console.warn(error);
+                return await interaction.reply({ content: "Failed to verify required reaction(s).", ephemeral: true });
             }
 
             const modal = new ModalBuilder()
@@ -461,12 +567,10 @@ bot.on(Events.InteractionCreate, async (interaction) => {
 
             await interaction.showModal(modal);
         } else if (interaction.commandName == 'update') {
-            if (!adminUserIds.includes(interaction.user.id)) {
+            if (!adminUserIds.includes(interaction.user.id)) 
                 await interaction.reply({ content: "You are not allowed to use this command.", ephemeral: true });
-            }
-
+            
             const doesRequireBuilding = interaction.options.getString('subscript') != 'keysystemgui' && interaction.options.getString('subscript') != 'deathfarm';
-
             const reply = await interaction.reply({
                 content: null,
                 embeds: [
@@ -491,8 +595,8 @@ bot.on(Events.InteractionCreate, async (interaction) => {
             const subscript = interaction.options.getString('subscript');
             const script_id = subscriptIds[subscript];
 
-            if (error) {
-                await reply.edit({
+            if (error)
+                return await reply.edit({
                     content: null,
                     embeds: [
                         {
@@ -510,11 +614,9 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                         }
                     ]
                 });
-                return;
-            }
 
-            if (!script_id) {
-                await reply.edit({
+            if (!script_id)
+                return await reply.edit({
                     content: null,
                     embeds: [
                         {
@@ -532,8 +634,6 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                         }
                     ]
                 });
-                return;
-            }
 
             let settings = {};
             let script_src = "warn('Something went wrong.')";
@@ -560,8 +660,8 @@ bot.on(Events.InteractionCreate, async (interaction) => {
 
                 const { build_error, build_stdout, build_stderr } = await exec("bash build.sh");
 
-                if (build_error) {
-                    await reply.edit({
+                if (build_error)
+                    return await reply.edit({
                         content: null,
                         embeds: [
                             {
@@ -579,9 +679,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                             }
                         ]
                     });
-                    return;
-                }
-
+                
                 script_src = readFileSync("mspaint-src/Distribution/Script.luau", "utf-8");
             } else {
                 if (subscript == 'keysystemgui') {
@@ -629,8 +727,8 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                 })
 
                 const data = await response.json();
-                if (!response.ok || !data.success) {
-                    await reply.edit({
+                if (!response.ok || !data.success)
+                    return await reply.edit({
                         content: null,
                         embeds: [
                             {
@@ -648,8 +746,6 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                             }
                         ]
                     });
-                    return;
-                }
 
                 await reply.edit({
                     content: null,
@@ -689,12 +785,12 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                     ]
                 });
             }
-
         } else if (interaction.commandName == 'review') {
-            if (REVIEW_BLACKLIST_ROLE != "" && interaction.member.roles.cache.has(REVIEW_BLACKLIST_ROLE)) {
-                await interaction.reply({ content: "You are blacklisted.", ephemeral: true })
-                return;
-            }
+            if (SETTINGS.ROLES.REVIEW_BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.REVIEW_BLACKLIST)) 
+                return await interaction.reply({ content: "You are blacklisted.", ephemeral: true });
+
+            if (SETTINGS.ROLES.REQUIRED_FOR_POSTS != "" && !interaction.member.roles.cache.has(SETTINGS.ROLES.REQUIRED_FOR_POSTS))
+                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role.", ephemeral: true });
 
             const review = await getReviewData(interaction.user.id);
             let reviewText = review.exists ? "Edit your review for mspaint." : "Submit a review for mspaint.";
@@ -734,7 +830,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
             const executor = interaction.fields.getTextInputValue('executor');
             const description = interaction.fields.getTextInputValue('description');
 
-            const attachments = interaction.client.bugReportAttachments[interaction.user.id] || {};
+            const attachments = interaction.client.bugReportAttachments.includes(interaction.user.id) ? interaction.client.bugReportAttachments[interaction.user.id] : {};
             const files = [];
 
             if (attachments.consoleAttachment) files.push(attachments.consoleAttachment);
