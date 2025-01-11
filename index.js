@@ -54,12 +54,13 @@ const SETTINGS = {
 
     ROLES: {
         REQUIRED_FOR_POSTS: "1298778295982227466",
+        REQUIRED_FOR_POSTS_INFO: "You can get this role from the bot panel in <#1282373591652110417>",
         BLACKLIST: "1290729273556074496",
         REVIEW_BLACKLIST: "1320839505485369456"
     },
 
     REQUIRED_REACTIONS: {
-        BUGREPORT:  [
+        BUGREPORT: [
             { CHANNEL_ID: "1285264560298790923", ID: "1327608638294200390", EMOJI: "✅" }, // known-bugs
             { CHANNEL_ID: "1292136911858565140", ID: "1305155370364178452", EMOJI: "✅" }  // faq
         ],
@@ -159,13 +160,13 @@ bot.on("ready", async () => {
     console.log(`[READY] ${bot.user.tag} has been successfully booted up!`)
 
     GUILD = await bot.guilds.fetch(SETTINGS.GUILD_ID);
-    if (SETTINGS.CHANNELS.BUGREPORT != "") 
+    if (SETTINGS.CHANNELS.BUGREPORT != "")
         BUGREPORT_CHANNEL = await GUILD.channels.fetch(SETTINGS.CHANNELS.BUGREPORT);
 
     if (SETTINGS.CHANNELS.SUGGESTION != "")
         SUGGESTION_CHANNEL = await GUILD.channels.fetch(SETTINGS.CHANNELS.SUGGESTION);
 
-    if (SETTINGS.CHANNELS.REVIEW != "") 
+    if (SETTINGS.CHANNELS.REVIEW != "")
         REVIEW_CHANNEL = await GUILD.channels.fetch(SETTINGS.CHANNELS.REVIEW);
 
     // bug report command
@@ -400,7 +401,7 @@ bot.on(Events.MessageReactionAdd, async (reaction, user) => { // for cache updat
         let found = false;
         for (const idx in SETTINGS.REQUIRED_REACTIONS) {
             const arr = SETTINGS.REQUIRED_REACTIONS[idx];
-            
+
             for (const val_idx in arr) {
                 if (reaction.message.id === arr[val_idx].ID) {
                     found = true;
@@ -420,7 +421,7 @@ bot.on(Events.MessageReactionAdd, async (reaction, user) => { // for cache updat
 bot.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isCommand()) {
         let cooldownAmount = 10;
-        
+
         if (interaction.commandName == 'bugreport')
             cooldownAmount = 300;
         else if (interaction.commandName == 'suggestion')
@@ -442,17 +443,17 @@ bot.on(Events.InteractionCreate, async (interaction) => {
         // GLOBAL END //
 
         if (interaction.commandName == 'bugreport') {
-            if (SETTINGS.ROLES.BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.BLACKLIST)) 
+            if (SETTINGS.ROLES.BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.BLACKLIST))
                 return await interaction.reply({ content: "You are blacklisted.", ephemeral: true });
 
             if (SETTINGS.ROLES.REQUIRED_FOR_POSTS != "" && !interaction.member.roles.cache.has(SETTINGS.ROLES.REQUIRED_FOR_POSTS))
-                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role.", ephemeral: true });
-            
+                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role. " + SETTINGS.ROLES.REQUIRED_FOR_POSTS_INFO, ephemeral: true });
+
             // REACTIONS
             try {
                 for (const reaction_idx in SETTINGS.REQUIRED_REACTIONS.BUGREPORT) {
                     const reaction_data = SETTINGS.REQUIRED_REACTIONS.BUGREPORT[reaction_idx];
-    
+
                     const reaction_channel = CHANNEL_CACHE.includes(reaction_data.CHANNEL_ID) ? CHANNEL_CACHE[reaction_data.CHANNEL_ID] : await GUILD.channels.fetch(reaction_data.CHANNEL_ID);
                     if (!reaction_channel) return await interaction.reply({ content: "Failed to verify required reaction(s).\n-# Couldn't fetch channel.", ephemeral: true });
                     CHANNEL_CACHE[reaction_data.CHANNEL_ID] = reaction_channel;
@@ -511,17 +512,17 @@ bot.on(Events.InteractionCreate, async (interaction) => {
 
             await interaction.showModal(modal);
         } else if (interaction.commandName == 'suggestion') {
-            if (SETTINGS.ROLES.BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.BLACKLIST)) 
+            if (SETTINGS.ROLES.BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.BLACKLIST))
                 return await interaction.reply({ content: "You are blacklisted.", ephemeral: true });
 
             if (SETTINGS.ROLES.REQUIRED_FOR_POSTS != "" && !interaction.member.roles.cache.has(SETTINGS.ROLES.REQUIRED_FOR_POSTS))
-                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role.", ephemeral: true });
+                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role. " + SETTINGS.ROLES.REQUIRED_FOR_POSTS_INFO, ephemeral: true });
 
             // REACTIONS
             try {
                 for (const reaction_idx in SETTINGS.REQUIRED_REACTIONS.SUGGESTION) {
                     const reaction_data = SETTINGS.REQUIRED_REACTIONS.SUGGESTION[reaction_idx];
-    
+
                     const reaction_channel = CHANNEL_CACHE.includes(reaction_data.CHANNEL_ID) ? CHANNEL_CACHE[reaction_data.CHANNEL_ID] : await GUILD.channels.fetch(reaction_data.CHANNEL_ID);
                     if (!reaction_channel) return await interaction.reply({ content: "Failed to verify required reaction(s).\n-# Couldn't fetch channel.", ephemeral: true });
                     CHANNEL_CACHE[reaction_data.CHANNEL_ID] = reaction_channel;
@@ -567,9 +568,9 @@ bot.on(Events.InteractionCreate, async (interaction) => {
 
             await interaction.showModal(modal);
         } else if (interaction.commandName == 'update') {
-            if (!adminUserIds.includes(interaction.user.id)) 
+            if (!adminUserIds.includes(interaction.user.id))
                 await interaction.reply({ content: "You are not allowed to use this command.", ephemeral: true });
-            
+
             const doesRequireBuilding = interaction.options.getString('subscript') != 'keysystemgui' && interaction.options.getString('subscript') != 'deathfarm';
             const reply = await interaction.reply({
                 content: null,
@@ -679,7 +680,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                             }
                         ]
                     });
-                
+
                 script_src = readFileSync("mspaint-src/Distribution/Script.luau", "utf-8");
             } else {
                 if (subscript == 'keysystemgui') {
@@ -786,11 +787,11 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                 });
             }
         } else if (interaction.commandName == 'review') {
-            if (SETTINGS.ROLES.REVIEW_BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.REVIEW_BLACKLIST)) 
+            if (SETTINGS.ROLES.REVIEW_BLACKLIST != "" && interaction.member.roles.cache.has(SETTINGS.ROLES.REVIEW_BLACKLIST))
                 return await interaction.reply({ content: "You are blacklisted.", ephemeral: true });
 
             if (SETTINGS.ROLES.REQUIRED_FOR_POSTS != "" && !interaction.member.roles.cache.has(SETTINGS.ROLES.REQUIRED_FOR_POSTS))
-                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role.", ephemeral: true });
+                return await interaction.reply({ content: "You are missing the <@&" + SETTINGS.ROLES.REQUIRED_FOR_POSTS + "> role. " + SETTINGS.ROLES.REQUIRED_FOR_POSTS_INFO, ephemeral: true });
 
             const review = await getReviewData(interaction.user.id);
             let reviewText = review.exists ? "Edit your review for mspaint." : "Submit a review for mspaint.";
