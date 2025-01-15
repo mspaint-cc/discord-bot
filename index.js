@@ -831,7 +831,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
             const executor = interaction.fields.getTextInputValue('executor');
             const description = interaction.fields.getTextInputValue('description');
 
-            const attachments = interaction.client.bugReportAttachments.includes(interaction.user.id) ? interaction.client.bugReportAttachments[interaction.user.id] : {};
+            const attachments = interaction.client.bugReportAttachments ? (interaction.client.bugReportAttachments[interaction.user.id] || {}) : {};
             const files = [];
 
             if (attachments.consoleAttachment) files.push(attachments.consoleAttachment);
