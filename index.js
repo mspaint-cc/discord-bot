@@ -376,23 +376,23 @@ function generateUpdateText(data) {
 
     if (data.updating) {
         const emoji_to_add = data.errored && data.whereError == "updating" ? "⚠️" : "✅";
-        const suffix = data.errored && data.whereError == "updating" ? "\n\n```diff\n- " + data.error + "\n```" : data.info ? "\n\n```ini\n[INFO] " + data.info + "\n```" : "";
+        const suffix = data.errored && data.whereError == "updating" ? "\n\n```diff\n- " + data.error + "\n```" : "";
 
-        text = "```ini\n[Updating] " + emoji_to_add + "\n[Building] 🔄\n[Publishing] ❌\n```" + suffix
+        text = "```ini\n[Updating] " + emoji_to_add + "\n[Building] 🔄\n[Publishing] ❌\n" + (data.info ? "\n[Info] " + data.info + "\n" : "") + "```" + suffix
     }
 
     if (data.building) {
         const emoji_to_add = data.errored && data.whereError == "building" ? "⚠️" : "✅";
-        const suffix = data.errored && data.whereError == "building" ? "\n\n```diff\n- " + data.error + "\n```" : data.info ? "\n\n```ini\n[INFO] " + data.info + "\n```" : "";
+        const suffix = data.errored && data.whereError == "building" ? "\n\n```diff\n- " + data.error + "\n```" : "";
 
-        text = "```ini\n[Updating] ✅\n[Building] " + emoji_to_add + "\n[Publishing] 🔄\n```" + suffix
+        text = "```ini\n[Updating] ✅\n[Building] " + emoji_to_add + "\n[Publishing] 🔄\n" + (data.info ? "\n[Info] " + data.info + "\n" : "") + "```" + suffix
     }
 
     if (data.publishing) {
         const emoji_to_add = data.errored && data.whereError == "publishing" ? "⚠️" : "✅";
-        const suffix = data.errored && data.whereError == "publishing" ? "\n\n```diff\n- " + data.error + "\n```" : data.info ? "\n\n```ini\n[INFO] " + data.info + "\n```" : "";
+        const suffix = data.errored && data.whereError == "publishing" ? "\n\n```diff\n- " + data.error + "\n```" : "";
 
-        text = "```ini\n[Updating] ✅\n[Building] ✅\n[Publishing] " + emoji_to_add + "\n```" + suffix
+        text = "```ini\n[Updating] ✅\n[Building] ✅\n[Publishing] " + emoji_to_add + "\n" + (data.info ? "\n[Info] " + data.info + "\n" : "") + "```" + suffix
     }
 
     return text;
@@ -682,7 +682,6 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                 });
             }
 
-
             for (const subscriptKey in script_ids) {
                 const subscriptData = script_ids[subscriptKey];
                 const settings = subscriptData.settings;
@@ -739,7 +738,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                             "description": generateUpdateText({
                                 updating: true,
                                 building: true,
-                                publishing: true,
+                                publishing: false,
 
                                 errored: false,
                                 whereError: "",
@@ -774,7 +773,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                                     "description": generateUpdateText({
                                         updating: true,
                                         building: true,
-                                        publishing: true,
+                                        publishing: false,
 
                                         errored: true,
                                         whereError: "publishing",
@@ -793,7 +792,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                                 "description": ({
                                     updating: true,
                                     building: true,
-                                    publishing: true,
+                                    publishing: false,
 
                                     errored: true,
                                     whereError: "publishing",
