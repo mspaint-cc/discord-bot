@@ -750,21 +750,22 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                     ]
                 });
 
-                try {
-                    const response = await fetch(`https://api.luarmor.net/v3/projects/${process.env.LRM_SCRIPT_ID}/scripts/${subscriptData.id}`, {
-                        method: "PUT",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": process.env["LRM_API_KEY"]
-                        },
-                        body: JSON.stringify({
-                            script: script_src,
-                            ...settings
-                        })
-                    })
 
+                const response = await fetch(`https://api.luarmor.net/v3/projects/${process.env.LRM_SCRIPT_ID}/scripts/${subscriptData.id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": process.env["LRM_API_KEY"]
+                    },
+                    body: JSON.stringify({
+                        script: script_src,
+                        ...settings
+                    })
+                })
+
+                try {
                     const data = await response.json();
-                    if (!response.ok || !data.success)
+                    if (!response.ok || !data.success) {
                         return await reply.edit({
                             content: null,
                             embeds: [
@@ -783,20 +784,21 @@ bot.on(Events.InteractionCreate, async (interaction) => {
                                 }
                             ]
                         });
+                    }
                 } catch (error) {
                     return await reply.edit({
                         content: null,
                         embeds: [
                             {
                                 "title": "ERROR: Couldn't publish to luarmor",
-                                "description": ({
+                                "description": generateUpdateText({
                                     updating: true,
                                     building: true,
                                     publishing: false,
 
                                     errored: true,
                                     whereError: "publishing",
-                                    error: error.message || toString(error)
+                                    error: "HTTP Error: " + response.status + " (" + response.statusText + ")\n" + toString(error)
                                 }),
                                 "color": 16734296
                             }
