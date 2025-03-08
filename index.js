@@ -312,6 +312,8 @@ async function moderateReview(review) {
             match.toLowerCase() === ".gg/mspaint"
         ) ? match : "[REDACTED]";
     });
+    review = review.replace(/(?:https?:\/\/)?gg\\[\w-]+/gi, "[REDACTED]");
+    review = review.replace(/discord[\s\S]*?gg/gu, "[REDACTED]");
 
     review = review.replace(/%[0-9A-Fa-f]{2}/g, "*"); // Replace URL encoded characters with asterisks
 
@@ -322,6 +324,7 @@ async function moderateReview(review) {
     });
 
     /* there is an unicode here but its stupid af (who cooked this) */                                                review = review.replace(" ̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺̺ͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩͩ", "*")
+    review = review.replace("•", "*")
     review = review.replace("﷽", "*")
     review = review.replace("𒈙", "*")
     review = review.replace("⸻", "*")
