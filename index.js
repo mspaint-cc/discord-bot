@@ -299,12 +299,17 @@ async function moderateReview(review) {
             match.toLowerCase() === "https://mspaint.cc"
         ) ? match : "[REDACTED]";
     });
-    review = review.replace(/(?:https?:\/\/)?(?:discord\.gg\/[\w-]*|discord\.com(?:\/invite\/[\w-]*|\/[\w-]*))/g, (match) => {
+    review = review.replace(/(?:https?:\/\/)?(?:discord[\W_]*gg\/[\w-]*|discord[\W_]*com(?:\/invite\/[\w-]*|\/[\w-]*))/gi, (match) => {
         return (
             match.toLowerCase() === "https://discord.gg/mspaint" ||
             match.toLowerCase() === "discord.gg/mspaint" ||
             match.toLowerCase() === "https://mspaint.cc/" ||
             match.toLowerCase() === "https://mspaint.cc"
+        ) ? match : "[REDACTED]";
+    });
+    review = review.replace(/(?:https?:\/\/)?gg\/[\w-]+/gi, (match) => {
+        return (
+            match.toLowerCase() === ".gg/mspaint"
         ) ? match : "[REDACTED]";
     });
 
