@@ -86,12 +86,12 @@ const SETTINGS = {
 
     REQUIRED_REACTIONS: {
         BUGREPORT: [
-            { CHANNEL_ID: "1285264560298790923", ID: "1327608638294200390", EMOJI: "✅" }, // known-bugs
+            // { CHANNEL_ID: "1285264560298790923", ID: "1327608638294200390", EMOJI: "✅" }, // known-bugs
             { CHANNEL_ID: "1292136911858565140", ID: "1305155370364178452", EMOJI: "✅" }  // faq
         ],
 
         SUGGESTION: [
-            { CHANNEL_ID: "1284272976795144234", ID: "1327638810481131663", EMOJI: "✅" }, // patched-features
+            // { CHANNEL_ID: "1284272976795144234", ID: "1327638810481131663", EMOJI: "✅" }, // patched-features
             { CHANNEL_ID: "1292136911858565140", ID: "1305155370364178452", EMOJI: "✅" }  // faq
         ]
     },
